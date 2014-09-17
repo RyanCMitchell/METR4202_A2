@@ -80,7 +80,7 @@ def findKeyPointsDist(img, template, maxdist=200):
     skp_final = []
     skp_final_dist = []
     for i, dis in itertools.izip(idx, dist):
-        if dis < maxdist:
+        if dis <= maxdist:
             skp_final.append(skp[i])
             skp_final_dist.append(dis)
 
@@ -122,7 +122,7 @@ def drawImageMappedPoints(img, skptotal, num=-1):
         num = maxlen
     for i in range(num):
         pt_b = (int(skptotal[i].pt[0]), int(skptotal[i].pt[1]))
-        cv2.circle(img, pt_b, 5, (255, 0, 0))
+        cv2.circle(img, pt_b, 3, (255, 0, 0))
     cv2.imshow("image", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

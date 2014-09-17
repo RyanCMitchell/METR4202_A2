@@ -20,8 +20,8 @@ mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and 
 smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
 testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
 
-img = cv2.imread(str(pathtest+"/"+testimages[3]))
-maxdist = 25
+img = cv2.imread(str(pathtest+"/"+testimages[7]))
+maxdist = 200  # 200 is default
 
 KeyPointsTotalList = []
 DistsTotalList = []
@@ -31,15 +31,13 @@ for i in largecups+mediumcups+smallcups:
         temp = cv2.imread(str(pathlarge+"/"+i))
     elif i in mediumcups:
         temp = cv2.imread(str(pathmedium+"/"+i))
-        
     elif i in smallcups:
         temp = cv2.imread(str(pathsmall+"/"+i))
-    print i
-    print len(findKeyPointsDist(img,temp,maxdist)[0])
-    print len(findKeyPointsDist(img,temp,maxdist)[1])
-
-    KeyPointsTotalList += (findKeyPointsDist(img,temp,maxdist))[0]
-    DistsTotalList += (findKeyPointsDist(img,temp,maxdist))[1]
+    #print i
+    
+    KeyPointsOut = findKeyPointsDist(img,temp,maxdist)
+    KeyPointsTotalList += KeyPointsOut[0]
+    DistsTotalList += KeyPointsOut[1]
     
 indices = range(len(DistsTotalList))
 indices.sort(key=lambda i: DistsTotalList[i])

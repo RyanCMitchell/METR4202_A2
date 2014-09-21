@@ -45,7 +45,7 @@ for image in chessImages:
         # Draw and display the corners
         cv2.drawChessboardCorners(img, (7,6), corners, ret)
         cv2.imshow('img', img)
-        cv2.waitKey()
+        cv2.waitKey(1000)
 
 # ret =>
 # mtx = camera matrix as a list of 3 rows

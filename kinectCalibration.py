@@ -26,14 +26,14 @@ objp[:, :2] = np.mgrid[0:board_h, 0:board_w].T.reshape(-1, 2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-chessImages = glob.glob('*.jpg')
+chessImages = glob.glob('CalibrationImages/*.jpg')
 
 for image in chessImages:
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
     # Find the chess board corners
-    ret, corners = cv2.findChessboardCorners(gray, (7,6), None)
+    ret, corners = cv2.findChessboardCorners(gray, (board_h, board_w), None)
 
     # If found, add object points, image points (after refining them)
     if ret == True:
@@ -43,7 +43,7 @@ for image in chessImages:
         imgpoints.append(corners)
 
         # Draw and display the corners
-        cv2.drawChessboardCorners(img, (7,6), corners, ret)
+        cv2.drawChessboardCorners(img, (board_h, board_w), corners, ret)
         cv2.imshow('img', img)
         cv2.waitKey(1000)
 
@@ -64,7 +64,7 @@ ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.sh
 #tvecs = tvecs * square
 
 # read in an immage to undistort
-img = cv2.imread('left05.jpg')
+img = cv2.imread('CalibrationImages/left05.jpg')
 h, w = img.shape[:2]
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
@@ -74,7 +74,7 @@ dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 # crop the image
 x, y, w, h = roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('calibresult.jpg',dst)
+cv2.imwrite('CalibrationImages/calibresult.jpg',dst)
 
 
 '''Re-projection error gives a good estimation of just how exact the found

@@ -20,7 +20,7 @@ mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and 
 smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
 testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
 
-img = cv2.imread(str(pathtest+"/"+testimages[6]))
+img = cv2.imread(str(pathtest+"/"+testimages[7]))
 maxdist = 200  # 200 is default
 
 KeyPointsTotalList = []

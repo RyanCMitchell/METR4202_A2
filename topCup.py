@@ -2,9 +2,6 @@ import cv2
 import numpy as np
 
 
-
-
-
 ##
 # Converts an RGB image to grayscale, where each pixel
 # now represents the intensity of the original image.
@@ -19,7 +16,6 @@ def rgb_to_gray(img):
 def do_threshold(image, threshold = 170):
     (thresh, im_bw) = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY)
     return (thresh, im_bw)
- 
  
  
 ##################################################### 
@@ -37,14 +33,11 @@ def do_threshold(image, threshold = 170):
 
 
 
-
-
-
 img = cv2.imread('cupLarge1.jpg', 0)
 #img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 img = cv2.medianBlur(img, 5)
-ret, thresh = cv2.threshold(img, 169, 255, 0)
-#thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+#ret, thresh = cv2.threshold(img, 169, 255, 0)
+thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 contours, hierarchy = cv2.findContours(thresh, 1, 2)
 
 cnt = contours[0]

@@ -4,7 +4,7 @@ def findKeyPoints(img, template, maxdist=200):
     import itertools
     import sys
 
-    detector = cv2.FeatureDetector_create("SIFT")
+    detector = cv2.FeatureDetector_create("FAST")
     descriptor = cv2.DescriptorExtractor_create("SIFT")
 
     skp = detector.detect(img)
@@ -55,7 +55,7 @@ def findKeyPointsDist(img, template, maxdist=200):
     import itertools
     import sys
 
-    detector = cv2.FeatureDetector_create("SIFT")
+    detector = cv2.FeatureDetector_create("FAST")
     descriptor = cv2.DescriptorExtractor_create("SIFT")
 
     skp = detector.detect(img)

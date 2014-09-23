@@ -21,8 +21,12 @@ mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and 
 smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
 testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
 
+depthMatrix = np.float32([[0.98, 0, -13],[0, 1, 7]])
+
+
 img, timestamp = freenect.sync_get_video()
 depth, timestamp = freenect.sync_get_depth()
+depth = cv2.warpAffine(depth, depthMatrix, (depth.shape[1], depth.shape[0]))
 maxdist = 200  # 200 is default
 
 KeyPointsTotalList = []
@@ -50,7 +54,7 @@ drawImageMappedPoints(img, KeyPointsTotalList)
 
 for i in xrange(depth.shape[0]):
     for j in xrange(depth.shape[1]):
-        if depth[i,j] > 700:
+        if depth[i,j] > 1000:
             img[i,j] = [0,0,0]
 
 cv2.imshow('image',img)

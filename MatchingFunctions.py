@@ -158,50 +158,53 @@ def match(img, temp, dist = 200, num = -1):
     cv2.destroyAllWindows()
 
 
-def homo(img, template):
-    MIN_MATCH_COUNT = 10
+def MatchAll(ImageNo, save, maxdist=200):
+    from os.path import isfile, join
+    from os import listdir
+    import cv2
+    import numpy as np
+    import itertools
+    import sys
+    #Clear all cv windows
+    cv2.destroyAllWindows()
 
-    # Initiate SIFT detector
-    sift = cv2.SIFT()
+    #Prepare a list of different training images
+    pathlarge = "TrainingImages/LargeCup/"
+    pathmedium = "TrainingImages/MediumCup/"
+    pathsmall = "TrainingImages/SmallCup/"
+    pathtest = "TestImages"
 
-    # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(template,None)
-    kp2, des2 = sift.detectAndCompute(img,None)
+    largecups = [ f for f in listdir(pathlarge) if isfile(join(pathlarge,f)) and f[0]<>"."]
+    mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and f[0]<>"."]
+    smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
+    testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
 
-    FLANN_INDEX_KDTREE = 0
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
+    img = cv2.imread(str(pathtest+"/"+testimages[ImageNo]))
 
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    KeyPointsTotalList = []
+    DistsTotalList = []
 
-    matches = flann.knnMatch(des1,des2,k=2)
-
-    # store all the good matches as per Lowe's ratio test.
-    good = []
-    for m,n in matches:
-        if m.distance < 0.7*n.distance:
-            good.append(m)
-
-    if len(good)>MIN_MATCH_COUNT:
-        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-        matchesMask = mask.ravel().tolist()
-
-        h,w = template.shape
-        pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-        dst = cv2.perspectiveTransform(pts,M)
-
-        # img = cv2.polylines(img,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-        # img = cv2.polylines(img,[np.int32(dst)],True,255,3)
-
-
-    else:
-        print "Not enough matches are found - %d/%d" % (len(good),MIN_MATCH_COUNT)
-        matchesMask = None
-
-    return M, kp1, kp2, des1, des2 
+    for i in largecups+mediumcups+smallcups:
+        if i in largecups:
+            temp = cv2.imread(str(pathlarge+"/"+i))
+        elif i in mediumcups:
+            temp = cv2.imread(str(pathmedium+"/"+i))
+        elif i in smallcups:
+            temp = cv2.imread(str(pathsmall+"/"+i))
+        #print i
+        
+        KeyPointsOut = findKeyPointsDist(img,temp,maxdist)
+        KeyPointsTotalList += KeyPointsOut[0]
+        DistsTotalList += KeyPointsOut[1]
+        
+    indices = range(len(DistsTotalList))
+    indices.sort(key=lambda i: DistsTotalList[i])
+    DistsTotalList = [DistsTotalList[i] for i in indices]
+    KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
+    img1 = img
+    if save == 1:
+        saveImageMappedPoints(img1, KeyPointsTotalList, ImageNo)
+    return KeyPointsTotalList, DistsTotalList, img
 
     
 if __name__== '__main__':

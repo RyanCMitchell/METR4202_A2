@@ -127,6 +127,21 @@ def drawImageMappedPoints(img, skptotal, num=-1):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def saveImageMappedPoints(img, skptotal, ImageNo, num=-1):
+    import cv2
+    import numpy as np
+    import itertools
+    import sys
+
+    maxlen = len(skptotal)
+    if num < 0 or num > maxlen:
+        num = maxlen
+    for i in range(num):
+        pt_b = (int(skptotal[i].pt[0]), int(skptotal[i].pt[1]))
+        cv2.circle(img, pt_b, 3, (255, 0, 0))
+    cv2.imwrite('ProcessedImages/Processed'+str(ImageNo)+'.jpg', img)
+
+
 def match(img, temp, dist = 200, num = -1):
     import cv2
     import numpy as np

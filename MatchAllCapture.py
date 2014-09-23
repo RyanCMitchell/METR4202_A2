@@ -5,6 +5,7 @@ import numpy as np
 import itertools
 import sys
 from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints
+import freenect
 
 #Clear all cv windows
 cv2.destroyAllWindows()
@@ -20,7 +21,8 @@ mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and 
 smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
 testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
 
-img = cv2.imread(str(pathtest+"/"+testimages[7]))
+img, timestamp = freenect.sync_get_video()
+depth, timestamp = freenect.sync_get_depth()
 maxdist = 200  # 200 is default
 
 KeyPointsTotalList = []
@@ -46,3 +48,11 @@ KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
 
 drawImageMappedPoints(img, KeyPointsTotalList)
 
+for i in xrange(depth.shape[0]):
+    for j in xrange(depth.shape[1]):
+        if depth[i,j] > 700:
+            img[i,j] = [0,0,0]
+
+cv2.imshow('image',img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()

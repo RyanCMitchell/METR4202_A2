@@ -1,18 +1,30 @@
 from os.path import isfile, join
+import freenect
 from os import listdir
 import itertools
 import sys
 import numpy as np
 import cv2
 import glob
+import frame_convert
 
-board_w = 6 # ours is 5
-board_h = 7 # ours is 8
+board_w = 5 # ours is 5
+board_h = 8 # ours is 8
 square = 26
 
 #Clear all CV windows
 cv2.destroyAllWindows()
+'''
+i = 0
+while i < 20:
+    img = freenect.sync_get_video()[0]
+    cv2.imshow('image',img)
+    cv2.imwrite('CalibrationImages/Calibrate'+str(i)+'.jpg', img)
+    cv2.waitKey(1000)
+    i+=1
 
+cv2.waitKey(0)
+'''
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
@@ -45,7 +57,7 @@ for image in chessImages:
         # Draw and display the corners
         cv2.drawChessboardCorners(img, (board_h, board_w), corners, ret)
         cv2.imshow('img', img)
-        cv2.waitKey(1000)
+        cv2.waitKey(10)
 
 # ret =>
 # mtx = camera matrix as a list of 3 rows
@@ -57,6 +69,7 @@ for image in chessImages:
 # tvecs = translation vectors
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 
+#check if this is the correct scaling
 #ret = ret * square
 #mtx = mtx * square
 #dist = dist * square
@@ -64,17 +77,31 @@ ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.sh
 #tvecs = tvecs * square
 
 # read in an immage to undistort
-img = cv2.imread('CalibrationImages/left05.jpg')
+img = cv2.imread('CalibrationImages/Calibrate3.jpg')
+img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+cv2.imshow('image',img)
+cv2.waitKey(0)
 h, w = img.shape[:2]
+# print h,w
+# print dist
+# print mtx
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
-# undistort
+# undistort the image
 dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
-
+# print dst.shape
+# cv2.imshow('sdsds',dst)
 # crop the image
 x, y, w, h = roi
+#print roi
 dst = dst[y:y+h, x:x+w]
-cv2.imwrite('CalibrationImages/calibresult.jpg',dst)
+#print dst.shape
+'''cv2.imshow('image',dst)
+cv2.waitKey(0)
+cv2.imwrite('CalibrationImages/Caliboutput/calibresult.jpg',dst)'''
+np.save('CalibrationImages/Caliboutput/mtx1',mtx)
+np.save('CalibrationImages/Caliboutput/dist',dist)
+
 
 
 '''Re-projection error gives a good estimation of just how exact the found

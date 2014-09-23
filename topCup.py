@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import freenect
 
 
 ##
@@ -33,24 +34,31 @@ def do_threshold(image, threshold = 170):
 
 
 
-img = cv2.imread('cupLarge1.jpg', 0)
-#img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+#img = cv2.imread('TestImages/Test3.jpg', 0)
+img, timestamp = freenect.sync_get_video()
+img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 img = cv2.medianBlur(img, 5)
 #ret, thresh = cv2.threshold(img, 169, 255, 0)
 thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 contours, hierarchy = cv2.findContours(thresh, 1, 2)
 
-cnt = contours[0]
-M = cv2.moments(cnt)
-#print M
+#print contours
+cntLengths = [len(i) for i in contours]
+cntMax = cntLengths.index(max(cntLengths))
 
-cx = int(M['m10']/M['m00'])
-cy = int(M['m01']/M['m00'])
-print "cx: ", cx
-print "cy: ", cy
+for i in range(len(contours)):
+    if 10 < len(contours[i]) < 1500:
+        cnt = contours[i]
+        M = cv2.moments(cnt)
+        #print M
 
-ellipse = cv2.fitEllipse(cnt)
-cv2.ellipse(img, ellipse, (0, 255, 0), 2)
+        cx = int(M['m10']/M['m00'])
+        cy = int(M['m01']/M['m00'])
+        print "cx: ", cx
+        print "cy: ", cy
+         
+        ellipse = cv2.fitEllipse(cnt)
+        cv2.ellipse(img, ellipse, (0, 255, 0), 2)
 
 cv2.imshow('img', img)
 cv2.waitKey()

@@ -44,5 +44,8 @@ indices.sort(key=lambda i: DistsTotalList[i])
 DistsTotalList = [DistsTotalList[i] for i in indices]
 KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
 
+
 drawImageMappedPoints(img, KeyPointsTotalList)
+
+
 

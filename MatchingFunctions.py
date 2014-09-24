@@ -206,8 +206,59 @@ def MatchAll(ImageNo, save, maxdist=200):
         saveImageMappedPoints(img1, KeyPointsTotalList, ImageNo)
     return KeyPointsTotalList, DistsTotalList, img
 
+def MatchAllCapture(save, maxdist=200):
+    from os.path import isfile, join
+    import freenect
+    from os import listdir
+    import cv2
+    import numpy as np
+    import itertools
+    import sys
+    #Clear all cv windows
+    #cv2.destroyAllWindows()
+
+    #Prepare a list of different training images
+    pathlarge = "TrainingImages/LargeCup/"
+    pathmedium = "TrainingImages/MediumCup/"
+    pathsmall = "TrainingImages/SmallCup/"
+    pathtest = "TestImages"
+
+    largecups = [ f for f in listdir(pathlarge) if isfile(join(pathlarge,f)) and f[0]<>"."]
+    mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and f[0]<>"."]
+    smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
+    testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
+
+    img, timestamp = freenect.sync_get_video()
+    depth, timestamp = freenect.sync_get_depth(format=freenect.DEPTH_REGISTERED)
+
+    KeyPointsTotalList = []
+    DistsTotalList = []
+
+    for i in largecups+mediumcups+smallcups:
+        if i in largecups:
+            temp = cv2.imread(str(pathlarge+"/"+i))
+        elif i in mediumcups:
+            temp = cv2.imread(str(pathmedium+"/"+i))
+        elif i in smallcups:
+            temp = cv2.imread(str(pathsmall+"/"+i))
+        #print i
+        
+        KeyPointsOut = findKeyPointsDist(img,temp,maxdist)
+        KeyPointsTotalList += KeyPointsOut[0]
+        DistsTotalList += KeyPointsOut[1]
+        
+    indices = range(len(DistsTotalList))
+    indices.sort(key=lambda i: DistsTotalList[i])
+    DistsTotalList = [DistsTotalList[i] for i in indices]
+    KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
+    img1 = img
+    if save == 1:
+        saveImageMappedPoints(img1, KeyPointsTotalList, ImageNo)
+        
+    return KeyPointsTotalList, DistsTotalList, img, depth
+
     
 if __name__== '__main__':
-    match('Test1.jpg','cupLarge1.jpg')
+    MatchAllCapture(0)
     
 

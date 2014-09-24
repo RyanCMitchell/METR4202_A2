@@ -25,9 +25,11 @@ depthMatrix = np.float32([[0.98, 0, -13],[0, 1, 7]])
 
 
 img, timestamp = freenect.sync_get_video()
-depth, timestamp = freenect.sync_get_depth()
-depth = cv2.warpAffine(depth, depthMatrix, (depth.shape[1], depth.shape[0]))
+depth, timestamp = freenect.sync_get_depth(format=freenect.DEPTH_REGISTERED)
+#depth = cv2.warpAffine(depth, depthMatrix, (depth.shape[1], depth.shape[0]))
 maxdist = 200  # 200 is default
+
+print depth.shape
 
 KeyPointsTotalList = []
 DistsTotalList = []
@@ -54,7 +56,7 @@ drawImageMappedPoints(img, KeyPointsTotalList)
 
 for i in xrange(depth.shape[0]):
     for j in xrange(depth.shape[1]):
-        if depth[i,j] > 1000:
+        if depth[i,j] > 0:
             img[i,j] = [0,0,0]
 
 cv2.imshow('image',img)

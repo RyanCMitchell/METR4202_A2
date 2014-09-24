@@ -4,12 +4,12 @@ import cv2
 import numpy as np
 import itertools
 import sys
-from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAll 
+from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAllCapture 
 from matplotlib import pyplot as plt
 from math import sqrt
 
-def MatchAllCluster(ImageNo, save, maxdist=200, groups=3):
-    PointsList, DisList, img = MatchAll(ImageNo,0,maxdist)
+def MatchAllCluster(save, maxdist=200, groups=3, filtparam=2.0):
+    PointsList, DisList, img, depth = MatchAllCapture(0,maxdist)
     PointsClusterList = []
     for i in xrange(len(PointsList)):
         PointsClusterList.append([PointsList[i].pt[0], PointsList[i].pt[1]])
@@ -49,18 +49,25 @@ def MatchAllCluster(ImageNo, save, maxdist=200, groups=3):
         distFromCenterAve.append(sum(distFromCenter[j])/len(distFromCenter[j]))
 
     #Remove points which are not close to centroid
-    filtparam = 2.0
     for j in xrange(groups):
         for i in range(len(segregated[j])):
             if distFromCenter[j][i] < filtparam*distFromCenterAve[j]:
                 segregatedF[j].append(segregated[j][i])
     for j in xrange(groups):
         segregatedF[j] = np.array(segregatedF[j])
+
+    # Create a centriod depth list
+    CentroidDepth = []
+    for j in xrange(groups):
+        CentroidDepth.append(depth[centers[j][0],centers[j][1]])
+
+    print CentroidDepth
+        
     
     return segregatedF, centers, img
 
-def DrawMatchAllCluster(ImageNo, save, maxdist=200, groups=3):
-    segregated, centers, img = MatchAllCluster(ImageNo, save, maxdist, groups)
+def DrawMatchAllCluster(save, maxdist=200, groups=3, filtparam=2.0):
+    segregated, centers, img = MatchAllCluster(save, maxdist, groups, filtparam)
     
     # Draw the groups
     colourList=[(0, 255, 0), (255, 0, 0), (0, 0, 255), (0, 255, 255), (255, 255, 0), (255, 0, 255)]
@@ -74,12 +81,19 @@ def DrawMatchAllCluster(ImageNo, save, maxdist=200, groups=3):
         rpt2 = tuple(segregated[j].max(axis=0))
         cv2.rectangle(img, rpt1, rpt2, colourList[j])
 
+    cv2.imshow("Cups Stream", img)
+    cv2.waitKey(0)
+    
     if save == 1:
         cv2.imwrite('ProcessedImages/ProcessedCluster'+str(ImageNo)+'.jpg', img)
 
 if __name__== '__main__':
-    #DrawMatchAllCluster(1,1,100)
+    DrawMatchAllCluster(0,100,3,2)
     
-    for i in xrange(12):
-        DrawMatchAllCluster(i,1,100,3)
+    """
+    while 1<2:
+        DrawMatchAllCluster(0,100,3,2)
+    cv2.destroyAllWindows()
+    """
+
     

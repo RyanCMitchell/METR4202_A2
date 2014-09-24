@@ -75,12 +75,8 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     # Convert to world coordinates
     FinalCentersWC = convertToWorldCoords(FinalCenters)
     
-    return segregatedF, centers, img, depth, FinalCenters, FinalCentersWC, groups
+    segregated = segregatedF
 
-def DrawMatchAllCluster(save, maxdist=200, filtparam=2.0):
-    segregated, centers, img, depth, FinalCenters, FinalCentersWC, groups = MatchAllCluster(save, maxdist, filtparam)
-
-    # Round and print coordinates
     #print FinalCenters
     #print FinalCentersWC
     
@@ -124,7 +120,7 @@ if __name__== '__main__':
 
     cv2.destroyAllWindows()
     while 1<2:
-        DrawMatchAllCluster(0,80,2)
+        MatchAllCluster(0,80,2)
         cv2.waitKey(50)
     
         

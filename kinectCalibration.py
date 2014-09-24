@@ -32,7 +32,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # The OpenCV test images are a 7x6 grid with 30mm squares
 # Our test images are a 5x8 grid with 26mm squares
 objp = np.zeros((board_w * board_h, 3), np.float32)
-objp[:, :2] = np.mgrid[0:board_h, 0:board_w].T.reshape(-1, 2)
+objp[:, :2] = np.mgrid[0:board_h:square, 0:board_w:square].T.reshape(-1, 2)
 
 # Arrays to store object points and image points from all the images.
 objpoints = [] # 3d point in real world space
@@ -57,7 +57,7 @@ for image in chessImages:
         # Draw and display the corners
         cv2.drawChessboardCorners(img, (board_h, board_w), corners, ret)
         cv2.imshow('img', img)
-        cv2.waitKey(10)
+        cv2.waitKey(000)
 
 # ret =>
 # mtx = camera matrix as a list of 3 rows
@@ -80,7 +80,7 @@ ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.sh
 img = cv2.imread('CalibrationImages/Calibrate3.jpg')
 img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 cv2.imshow('image',img)
-cv2.waitKey(0)
+cv2.waitKey(1000)
 h, w = img.shape[:2]
 # print h,w
 # print dist
@@ -90,7 +90,7 @@ newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 # undistort the image
 dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 # print dst.shape
-# cv2.imshow('sdsds',dst)
+#cv2.imshow('sdsds',dst)
 # crop the image
 x, y, w, h = roi
 #print roi

@@ -257,6 +257,40 @@ def MatchAllCapture(save, maxdist=200):
         
     return KeyPointsTotalList, DistsTotalList, img, depth
 
+def Cluster(Z, groups = 3):
+    import cv2
+    from math import sqrt
+    
+    # define criteria and apply kmeans()
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    ret,label,center = cv2.kmeans(Z,groups,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+
+    # Now separate the data, Note the flatten()
+    segregated = []
+    centers = []
+    distFromCenter = []
+    
+    for i in xrange(groups):
+        segregated.append(Z[label.flatten()==i])
+        distFromCenter.append([])
+        centers.append((int(center[i][0]), int(center[i][1])))
+
+    # Create a distance from centroid list
+    for j in xrange(groups):
+        x1 = centers[j][0]
+        y1 = centers[j][1]
+        for i in range(len(segregated[j])):
+            x2 = segregated[j][i][0]
+            y2 = segregated[j][i][1]
+            distFromCenter[j].append( sqrt( (x2 - x1)**2 + (y2 - y1)**2 ))
+
+    # Create an average distance from centroid list
+    distFromCenterAve = []
+    for j in xrange(groups):
+        distFromCenterAve.append(sum(distFromCenter[j])/len(distFromCenter[j]))
+
+    return segregated, centers, distFromCenter, distFromCenterAve
+
     
 if __name__== '__main__':
     MatchAllCapture(0)

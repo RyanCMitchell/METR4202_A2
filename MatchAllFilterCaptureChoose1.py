@@ -1,16 +1,17 @@
 from os.path import isfile, join
 from os import listdir
-import cv2
 import numpy as np
-import itertools
-import sys
+import freenect, itertools, sys, time, cv2
 from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAllCapture, Cluster
 from matplotlib import pyplot as plt
 from math import sqrt
 from convertDepth import convertToWorldCoords
 
+
 def MatchAllCluster(save, maxdist=200, filtparam=2.0):
+    
     PointsList, DisList, img, depth = MatchAllCapture(0,maxdist)
+    
     PointsClusterList = []
     for i in xrange(len(PointsList)):
         if depth[PointsList[i].pt[1], PointsList[i].pt[0]] <> 0 and depth[PointsList[i].pt[1], PointsList[i].pt[0]] < 1000:
@@ -18,10 +19,9 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
 
     Z = np.array(PointsClusterList)
 
-    print "points list length ",len(Z)
-
     if len(Z) < 30:
-        print "holy ducking shit"
+        cv2.imshow("Cups Stream", img)
+        return
         
      
     # convert to np.float32
@@ -57,15 +57,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     for j in xrange(groups):
         segregatedF[j] = np.array(segregatedF[j])
 
-    print "-"*20
-    print "groups  ", groups
     #remove clusters that are 3 points or smaller
     for i in xrange(groups):
-        print len(segregatedF[i])
-        print "std ", np.std(segregatedF[j])
         if len(segregatedF[i]) <= 5 or np.isnan(np.std(segregatedF[j])):
             print "HOLY FUCKING SHIT"
-    print "-"*20
 
     # Create a centriod depth list
     FinalCenters = []
@@ -77,9 +72,6 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     
     segregated = segregatedF
 
-    #print FinalCenters
-    #print FinalCentersWC
-    
     # Draw the groups
     colourList=[(0, 255, 0), (255, 0, 0), (0, 0, 255), (0, 255, 255), (255, 255, 0), (255, 0, 255)]
     for j in xrange(groups):
@@ -97,9 +89,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     if save == 1:
         cv2.imwrite('ProcessedImages/ProcessedCluster'+str(ImageNo)+'.jpg', img)
 
-    cv2.imshow("Cups Stream", img)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    #print FinalCenters
+    #print FinalCentersWC
+
+    return img
     
     """
     # Black out 0 depth
@@ -113,15 +106,16 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     cv2.destroyAllWindows()
     """
 
+
 if __name__== '__main__':
     
     
-    #DrawMatchAllCluster(0,60,3,2)
-
     cv2.destroyAllWindows()
     while 1<2:
-        MatchAllCluster(0,80,2)
-        cv2.waitKey(50)
+        cv2.imshow("Cups Stream", MatchAllCluster(0,80,2))
+        cv2.waitKey(10)
+
+    
     
         
 

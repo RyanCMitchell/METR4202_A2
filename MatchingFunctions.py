@@ -49,17 +49,15 @@ def findKeyPoints(img, template, maxdist=200):
 
     return skp_final, tkp_final
 
-def findKeyPointsDist(img, template, maxdist=200):
+def findKeyPointsDist(img, template, skp, sd, maxdist=200):
+    import time
     import cv2
     import numpy as np
     import itertools
     import sys
-
+    
     detector = cv2.FeatureDetector_create("FAST")
     descriptor = cv2.DescriptorExtractor_create("SIFT")
-
-    skp = detector.detect(img)
-    skp, sd = descriptor.compute(img, skp)
 
     tkp = detector.detect(template)
     tkp, td = descriptor.compute(template, tkp)
@@ -157,7 +155,7 @@ def match(img, temp, dist = 200, num = -1):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
+"""
 def MatchAll(ImageNo, save, maxdist=200):
     from os.path import isfile, join
     from os import listdir
@@ -192,8 +190,13 @@ def MatchAll(ImageNo, save, maxdist=200):
         elif i in smallcups:
             temp = cv2.imread(str(pathsmall+"/"+i))
         #print i
+
+        detector = cv2.FeatureDetector_create("FAST")
+        descriptor = cv2.DescriptorExtractor_create("SIFT")
+        skp = detector.detect(img)
+        skp, sd = descriptor.compute(img, skp)
         
-        KeyPointsOut = findKeyPointsDist(img,temp,maxdist)
+        KeyPointsOut = findKeyPointsDist(img,temp,skp,sd,maxdist)
         KeyPointsTotalList += KeyPointsOut[0]
         DistsTotalList += KeyPointsOut[1]
         
@@ -205,7 +208,7 @@ def MatchAll(ImageNo, save, maxdist=200):
     if save == 1:
         saveImageMappedPoints(img1, KeyPointsTotalList, ImageNo)
     return KeyPointsTotalList, DistsTotalList, img
-
+"""
 def MatchAllCapture(save, maxdist=200):
     from os.path import isfile, join
     import freenect
@@ -214,6 +217,7 @@ def MatchAllCapture(save, maxdist=200):
     import numpy as np
     import itertools
     import sys
+    import time
     #Clear all cv windows
     #cv2.destroyAllWindows()
 
@@ -227,10 +231,15 @@ def MatchAllCapture(save, maxdist=200):
     mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and f[0]<>"."]
     smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
     testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
-
+    
     img, timestamp = freenect.sync_get_video()
     depth, timestamp = freenect.sync_get_depth(format=freenect.DEPTH_REGISTERED)
 
+    detector = cv2.FeatureDetector_create("FAST")
+    descriptor = cv2.DescriptorExtractor_create("SIFT")
+    skp = detector.detect(img)
+    skp, sd = descriptor.compute(img, skp)
+    
     KeyPointsTotalList = []
     DistsTotalList = []
 
@@ -242,11 +251,10 @@ def MatchAllCapture(save, maxdist=200):
         elif i in smallcups:
             temp = cv2.imread(str(pathsmall+"/"+i))
         #print i
-        
-        KeyPointsOut = findKeyPointsDist(img,temp,maxdist)
+        KeyPointsOut = findKeyPointsDist(img,temp,skp,sd,maxdist)
         KeyPointsTotalList += KeyPointsOut[0]
         DistsTotalList += KeyPointsOut[1]
-        
+
     indices = range(len(DistsTotalList))
     indices.sort(key=lambda i: DistsTotalList[i])
     DistsTotalList = [DistsTotalList[i] for i in indices]

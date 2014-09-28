@@ -83,6 +83,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
 
     # Seperate the top of each cup in pixel space
     depthimg = img.copy()
+    maskimg = depth.copy()
 
     # Start Cup Classification loop
     for j in xrange(groups):
@@ -91,17 +92,21 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         h = -0.13216*FC[j][2]+154.6256
         h = h*1.8
         cup1 = depthimg[(FC[j][1]-h):(FC[j][1]), (FC[j][0]-w):(FC[j][0]+w)]
+        mask1 = maskimg[(FC[j][1]-h):(FC[j][1]), (FC[j][0]-w):(FC[j][0]+w)]
         cup2 = depthimg[(FC[j][1]):(FC[j][1]+h), (FC[j][0]-w):(FC[j][0]+w)]
+        mask2 = maskimg[(FC[j][1]):(FC[j][1]+h), (FC[j][0]-w):(FC[j][0]+w)]
 
         # Determine the bouding rectangle of the largest contour in the top area
         gray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray,(5,5),0)
-        thresh1 = 100
-        thresh2 = 200
-        edges = cv2.Canny(blur,thresh1,thresh2)
-        cv2.imshow("Cups Stream", edges)
-        cv2.waitKey(0)
-        
+        blurDepth = cv2.blur(mask1,(5,5))
+        thresh1 = 200
+        thresh2 = 400
+        for i in xrange(cup1.shape[0]):
+            for j in xrange(cup1.shape[1]):
+                if blurDepth[i,j] == 0 or blurDepth[i,j]>1000:
+                    gray[i,j] = 0
+        edges = cv2.Canny(gray,thresh1,thresh2)
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours) == 0:
             print "No Top Contours"
@@ -113,8 +118,8 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         # Determine the bouding rectangle of the largest contour in the bottom area
         gray2 = cv2.cvtColor(cup2,cv2.COLOR_BGR2GRAY)
         blur2 = cv2.GaussianBlur(gray2,(5,5),0)
-        thresh21 = 100
-        thresh22 = 200
+        thresh21 = 200
+        thresh22 = 400
         edges2 = cv2.Canny(blur2,thresh21,thresh22)
         contours2,hierarchy2 = cv2.findContours(edges2,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours2) == 0:

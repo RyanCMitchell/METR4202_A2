@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from os.path import isfile, join
 from os import listdir
 import numpy as np
@@ -20,6 +21,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     Z = np.array(PointsClusterList)
 
     if len(Z) < 30:
+        print "No Cups"
         cv2.imshow("Cups Stream", img)
         return
         
@@ -54,15 +56,18 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         for i in range(len(segregated[j])):
             if distFromCenter[j][i] < filtparam*distFromCenterAve[j]:
                 segregatedF[j].append(segregated[j][i])
-    for j in xrange(groups):
-        segregatedF[j] = np.array(segregatedF[j])
+
 
     #remove clusters that are >= 3 points or all superimposed
-    for i in xrange(groups):
-        if len(segregatedF[i]) <= 5 or np.isnan(np.std(segregatedF[j])):
-            print "HOLY FUCKING SHIT"
-            cv2.imshow("Cups Stream", img)
-            return
+    i = 0
+    while i < groups:
+        if len(segregatedF[i]) <= 5 or np.isnan(np.std(segregatedF[i])):
+            del segregatedF[i], centers[i], distFromCenter[i], distFromCenterAve[i]
+            groups -= 1
+        i += 1
+
+    for j in xrange(groups):
+        segregatedF[j] = np.array(segregatedF[j])
 
     # Create a centriod depth list
     FinalCenters = []
@@ -85,95 +90,121 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         w = -0.08811*FC[j][2]+103.0837
         h = -0.13216*FC[j][2]+154.6256
         cup1 = depthimg[(FC[j][1]-h):(FC[j][1]), (FC[j][0]-w):(FC[j][0]+w)]
+        cup2 = depthimg[(FC[j][1]):(FC[j][1]+h), (FC[j][0]-w):(FC[j][0]+w)]
 
-        # Determine the bouding rectangle of the largest contour in that area
+        # Determine the bouding rectangle of the largest contour in the top area
         gray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray,(5,5),0)
-        thresh = 240
+        thresh1 = 50
+        thresh2 = 200
         global contours
-        edges = cv2.Canny(blur,thresh,thresh*2)
+        edges = cv2.Canny(blur,thresh1,thresh2)
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-        cnt = max(contours, key=len)
+        if len(contours) == 0:
+            print "No Contours"
+            return
+        else:
+            cnt = max(contours, key=len)
         x,y,w1,h1 = cv2.boundingRect(cnt)
 
-        # Use brounding rectangle size to determine cup type
+        # Determine the bouding rectangle of the largest contour in the bttom area
+        gray2 = cv2.cvtColor(cup2,cv2.COLOR_BGR2GRAY)
+        blur2 = cv2.GaussianBlur(gray2,(5,5),0)
+        thresh21 = 50
+        thresh22 = 200
+        edges2 = cv2.Canny(blur2,thresh21,thresh22)
+        contours2,hierarchy2 = cv2.findContours(edges2,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours2) == 0:
+            print "No Bottom Contours"
+            return
+        else:
+            cnt2 = max(contours2, key=len)
+        x2,y2,w21,h21 = cv2.boundingRect(cnt2)
+
+        # Use brounding rectangle size to determine cup type and orientation
         s1 = [(FC[j][0]-w)+x,(FC[j][1]-h)+ y,FC[j][2]]
         s2 = [(FC[j][0]-w)+x+w1,(FC[j][1]-h)+ y,FC[j][2]]
+        s3 = [(FC[j][0]-w)+x2,(FC[j][1])+ y2 + h21,FC[j][2]]
+        s4 = [(FC[j][0]-w)+x2+w21,(FC[j][1])+ y2 + h21,FC[j][2]]
         top = [s1,s2]
+        bottom = [s3,s4]
         topWorld = convertToWorldCoords(top)
+        bottomWorld = convertToWorldCoords(bottom)
         CupTopWidth = topWorld[1][0]-topWorld[0][0]
+        CupBottomWidth = bottomWorld[1][0]-bottomWorld[0][0]
 
-        if CupTopWidth > 100:
-            cupType = "Not a Cup"
-        elif CupTopWidth > 84.5:
-            cupType = "Large"
-        elif CupTopWidth > 71:
-            cupType = "Medium"
-        elif CupTopWidth > 50:
-            cupType = "Small"
+        if CupBottomWidth > CupTopWidth:
+            
+            cupOrientation = "Upsidedown"
+            cupFill = "Empty"
+            CupTopWidth = CupBottomWidth
+            
+            if CupTopWidth > 100:
+                cupType = "Not a Cup"
+            elif CupTopWidth > 84.5:
+                cupType = "Large"
+            elif CupTopWidth > 71:
+                cupType = "Medium"
+            elif CupTopWidth > 50:
+                cupType = "Small"
+            else:
+                cupType = "Not a Cup"
+
         else:
-            cupType = "Not a Cup"
 
-        FinalCentersWC[j].append(cupType)
+            cupOrientation = "Upright"
+            cupFill = "Unsure"
+            
+            if CupTopWidth > 100:
+                cupType = "Not a Cup"
+            elif CupTopWidth > 84.5:
+                cupType = "Large"
+            elif CupTopWidth > 71:
+                cupType = "Medium"
+            elif CupTopWidth > 50:
+                cupType = "Small"
+            else:
+                cupType = "Not a Cup"
 
+        
         #Draw the top of the bounding rectangle
-        cv2.line(img,(int(round(s1[0],0)),int(round(s1[1],0))),(int(round(s2[0],0)),int(round(s2[1],0))),colourList[j])
-##        new_cnt = [[x[0][0],x[0][1]] for x in cnt]
-##        print new_cnt
-                
-        cv2.drawContours(img,[cnt],0,colourList[j],2)
+        if cupType <> "Not a Cup":
+            new_cnt = cnt + [int(round((FC[j][0]-w),0)),int(round((FC[j][1]-h),0))]
+            cv2.line(img,(int(round(s1[0],0)),int(round(s1[1],0))),(int(round(s2[0],0)),int(round(s2[1],0))),colourList[j])
+            cv2.drawContours(img,[new_cnt],0,colourList[j],2)
+            new_cnt2 = cnt2 + [int(round((FC[j][0]-w),0)),int(round((FC[j][1]),0))]
+            cv2.line(img,(int(round(s3[0],0)),int(round(s3[1],0))),(int(round(s4[0],0)),int(round(s4[1],0))),colourList[j])
+            cv2.line(img,(int(round(s3[0],0)),int(round(s3[1],0))),(int(round(s1[0],0)),int(round(s1[1],0))),colourList[j])
+            cv2.line(img,(int(round(s4[0],0)),int(round(s4[1],0))),(int(round(s2[0],0)),int(round(s2[1],0))),colourList[j])
+            cv2.drawContours(img,[new_cnt2],0,colourList[j],2)
+            FinalCentersWC[j].append(cupType)
+            FinalCentersWC[j].append(cupOrientation)
+            FinalCentersWC[j].append(cupFill)
+        
     
     # Draw the groups
+    FinalFinalCentersWC = FinalCentersWC[:]
     for j in xrange(groups):
-        centerst = tuple(np.array(centers[j])+np.array([0,50]))
-        cv2.putText(img,str(FinalCentersWC[j]), centerst, cv2.FONT_HERSHEY_SIMPLEX, 0.3, colourList[j])
-        cv2.circle(img, centers[j], 10, colourList[j], -1)
-        cv2.circle(img, centers[j], 2, (0,0,0), -1)
-        for i in range(len(segregated[j])):
-            pt_a = (int(segregated[j][i,0]), int(segregated[j][i,1]))
-            cv2.circle(img, pt_a, 3, colourList[j])
-        rpt1 = tuple(segregated[j].min(axis=0))
-        rpt2 = tuple(segregated[j].max(axis=0))
-        #cv2.rectangle(img, rpt1, rpt2, colourList[j])
+        if len(FinalCentersWC[j]) > 3:
+            centerst = tuple(np.array(centers[j])+np.array([0,50]))
+            cv2.putText(img,str(FinalCentersWC[j]), centerst, cv2.FONT_HERSHEY_SIMPLEX, 0.3, colourList[j])
+            cv2.circle(img, centers[j], 10, colourList[j], -1)
+            cv2.circle(img, centers[j], 2, (0,0,0), -1)
+            for i in range(len(segregated[j])):
+                pt_a = (int(segregated[j][i,0]), int(segregated[j][i,1]))
+                cv2.circle(img, pt_a, 3, colourList[j])
+            #rpt1 = tuple(segregated[j].min(axis=0))
+            #rpt2 = tuple(segregated[j].max(axis=0))
+            #cv2.rectangle(img, rpt1, rpt2, colourList[j])
+        else:
+            del FinalFinalCentersWC[j]
     
     if save == 1:
         cv2.imwrite('ProcessedImages/ProcessedCluster'+str(ImageNo)+'.jpg', img)
 
-    print FinalCenters
-    print FinalCentersWC
-    
-    
-    cv2.imshow("Cups Stream", img)
-
-    
-    
-    """
-    depthFindCup1 = img.copy()
-    depthFindCup1.fill(0)
-    dc = FinalCentersWC[0][2]
-    for i in xrange(depth.shape[0]):
-        for j in xrange(depth.shape[1]):
-            if dc-20<depth[i,j]<dc+70:
-                depthFindCup1[i,j] = [255,255,255]
-    gray = cv2.cvtColor(depthFindCup1, cv2.COLOR_BGR2GRAY)
-    gray = cv2.bilateralFilter(gray, 11, 17, 17)
-    edged = cv2.Canny(gray, 30, 200)
-    (cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(img, cnts, -1, (0, 255, 0), 1)
-    """
-    
-    
-    """
-    # Black out 0 depth
-    for i in xrange(depth.shape[0]):
-        for j in xrange(depth.shape[1]):
-            if depth[i,j] == 0 or depth[i,j]>1000:
-                img[i,j] = [0,0,0]
-
-    cv2.imshow("Cups Stream", img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    """
+    if len(FinalFinalCentersWC)<>0:
+        print FinalFinalCentersWC
+        cv2.imshow("Cups Stream", img)
 
 
 if __name__== '__main__':

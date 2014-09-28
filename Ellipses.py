@@ -4,7 +4,7 @@ import numpy as np
 def thresh_callback(thresh):
     global contours
     edges = cv2.Canny(blur,thresh,thresh*2)
-    drawing = np.zeros(img.shape,np.uint8)      # Image to draw the contours
+    drawing = np.zeros(cup1.shape,np.uint8)      # Image to draw the contours
     contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contours:
         rect = cv2.minAreaRect(cnt)             # rect = ((center_x,center_y),(width,height),angle)
@@ -18,10 +18,10 @@ def thresh_callback(thresh):
         cv2.polylines(drawing,[points],True,(255,0,0),2)# draw rectangle in blue color
 
         cv2.imshow('output',drawing)
-        cv2.imshow('input',img)
+        cv2.imshow('input',cup1)
 
-img = cv2.imread('new.bmp')
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+gray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
 blur = cv2.GaussianBlur(gray,(5,5),0)
 
 cv2.namedWindow('input')

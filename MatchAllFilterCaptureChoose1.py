@@ -89,6 +89,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         # Choose pixel area likley to contain a cup
         w = -0.08811*FC[j][2]+103.0837
         h = -0.13216*FC[j][2]+154.6256
+        h = h*1.8
         cup1 = depthimg[(FC[j][1]-h):(FC[j][1]), (FC[j][0]-w):(FC[j][0]+w)]
         cup2 = depthimg[(FC[j][1]):(FC[j][1]+h), (FC[j][0]-w):(FC[j][0]+w)]
 
@@ -96,7 +97,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         gray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray,(5,5),0)
         thresh1 = 50
-        thresh2 = 200
+        thresh2 = 150
         global contours
         edges = cv2.Canny(blur,thresh1,thresh2)
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
@@ -107,11 +108,11 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
             cnt = max(contours, key=len)
         x,y,w1,h1 = cv2.boundingRect(cnt)
 
-        # Determine the bouding rectangle of the largest contour in the bttom area
+        # Determine the bouding rectangle of the largest contour in the bottom area
         gray2 = cv2.cvtColor(cup2,cv2.COLOR_BGR2GRAY)
         blur2 = cv2.GaussianBlur(gray2,(5,5),0)
         thresh21 = 50
-        thresh22 = 200
+        thresh22 = 150
         edges2 = cv2.Canny(blur2,thresh21,thresh22)
         contours2,hierarchy2 = cv2.findContours(edges2,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours2) == 0:
@@ -183,7 +184,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         
     
     # Draw the groups
-    FinalFinalCentersWC = FinalCentersWC[:]
+    deleteList = []
     for j in xrange(groups):
         if len(FinalCentersWC[j]) > 3:
             centerst = tuple(np.array(centers[j])+np.array([0,50]))
@@ -193,11 +194,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
             for i in range(len(segregated[j])):
                 pt_a = (int(segregated[j][i,0]), int(segregated[j][i,1]))
                 cv2.circle(img, pt_a, 3, colourList[j])
-            #rpt1 = tuple(segregated[j].min(axis=0))
-            #rpt2 = tuple(segregated[j].max(axis=0))
-            #cv2.rectangle(img, rpt1, rpt2, colourList[j])
         else:
-            del FinalFinalCentersWC[j]
+            deleteList.append(j)
+            
+    FinalFinalCentersWC = [i for j, i in enumerate(FinalCentersWC) if j not in deleteList]
     
     if save == 1:
         cv2.imwrite('ProcessedImages/ProcessedCluster'+str(ImageNo)+'.jpg', img)

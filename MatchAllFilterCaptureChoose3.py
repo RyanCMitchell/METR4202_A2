@@ -22,7 +22,6 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
 
     if len(Z) < 30:
         print "No Cups"
-        cv2.imshow("Cups Stream", img)
         return
         
      
@@ -83,37 +82,89 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
 
     # Seperate the top of each cup in pixel space
     depthimg = img.copy()
+    depthmask = depth.copy()
 
     # Start Cup Classification loop
     for j in xrange(groups):
+        centx = FC[j][0]
+        centy = FC[j][1]
+        centdepth = FC[j][2]
+        
         # Choose pixel area likley to contain a cup
-        w = -0.08811*FC[j][2]+103.0837
-        h = -0.13216*FC[j][2]+154.6256
+        w = -0.08811*centdepth+103.0837
+        h = -0.13216*centdepth+154.6256
         h = h
-        cup1 = depthimg[(FC[j][1]-h):(FC[j][1]), (FC[j][0]-w):(FC[j][0]+w)]
-        cup2 = depthimg[(FC[j][1]):(FC[j][1]+h), (FC[j][0]-w):(FC[j][0]+w)]
+        cup1 = depthimg[(centy-h):(centy), (centx-w):(centx+w)]
+        cupDepth1 = depthmask[(centy-h):(FC[j][1]), (centx-w):(centx+w)]
+        cup2 = depthimg[(centy):(centy+h), (centx-w):(centx+w)]
+        cupDepth2 = depthmask[(centy):(centy+h), (centx-w):(centx+w)]
 
-        # Determine the bouding rectangle of the largest contour in the top area
-        gray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray,(5,5),0)
-        thresh1 = 100
-        thresh2 = 200
-        edges = cv2.Canny(blur,thresh1,thresh2)
+        # Create blank binary images to fill with depth thresholds
+        shape1 = np.zeros(cupDepth1.shape,dtype=np.uint8)
+        shape2 = np.zeros(cupDepth2.shape,dtype=np.uint8)
+
+        
+        # Colour in upper threshold depths
+        upper = centdepth+80
+        lower = centdepth-30
+        for i in xrange(cupDepth1.shape[0]):
+            for k in xrange(cupDepth1.shape[1]):
+                if lower<cupDepth1[i,k]<upper:
+                    shape1[i,k] = 255
+
+        # Colour in upper threshold depths
+        for i in xrange(cupDepth2.shape[0]):
+            for k in xrange(cupDepth2.shape[1]):
+                if lower<cupDepth2[i,k]<upper:
+                    shape2[i,k] = 255
+                    
+        cv2.imshow('depth',shape1)
+        cv2.waitKey(0)
+            
+        # Apply a median filter to the depth thresholds        
+        shape1blur = cv2.blur(shape1,(5,5))
+        shape2blur = cv2.blur(shape2,(5,5))
+
+        cv2.imshow('blur',shape1blur)
+        cv2.waitKey(0)
+
+        thresh1 = 200
+        thresh2 = 400
+        edges = cv2.Canny(shape1blur,thresh1,thresh2)
+
+        cv2.imshow('edges',edges)
+        cv2.waitKey(0)
+
         
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        
+        for cnt in contours:
+            cv2.drawContours(cup1,[cnt],0,colourList[j],2)
+
+        cv2.imshow('cnt',cup1)
+        cv2.waitKey(0)
+        
+        cont = np.vstack(contours)
+        hull = cv2.convexHull(cont)
+
         if len(contours) == 0:
             print "No Top Contours"
             return
         else:
             cnt = max(contours, key=len)
-        x,y,w1,h1 = cv2.boundingRect(cnt)
+        x,y,w1,h1 = cv2.boundingRect(hull)
 
+        cv2.drawContours(cup1,[hull],0,colourList[j+1],2)
+
+        cv2.imshow('cntMax',cup1)
+        cv2.waitKey(0)
+
+
+        
         # Determine the bouding rectangle of the largest contour in the bottom area
-        gray2 = cv2.cvtColor(cup2,cv2.COLOR_BGR2GRAY)
-        blur2 = cv2.GaussianBlur(gray2,(5,5),0)
-        thresh21 = 100
-        thresh22 = 200
-        edges2 = cv2.Canny(blur2,thresh21,thresh22)
+        thresh21 = 50
+        thresh22 = 60
+        edges2 = cv2.Canny(shape2blur,thresh21,thresh22)
         contours2,hierarchy2 = cv2.findContours(edges2,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours2) == 0:
             print "No Bottom Contours"
@@ -123,10 +174,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         x2,y2,w21,h21 = cv2.boundingRect(cnt2)
 
         # Use brounding rectangle size to determine cup type and orientation
-        s1 = [(FC[j][0]-w)+x,(FC[j][1]-h)+ y,FC[j][2]]
-        s2 = [(FC[j][0]-w)+x+w1,(FC[j][1]-h)+ y,FC[j][2]]
-        s3 = [(FC[j][0]-w)+x2,(FC[j][1])+ y2 + h21,FC[j][2]]
-        s4 = [(FC[j][0]-w)+x2+w21,(FC[j][1])+ y2 + h21,FC[j][2]]
+        s1 = [(centx-w)+x,(centy-h)+ y,centdepth]
+        s2 = [(centx-w)+x+w1,(centy-h)+ y,centdepth]
+        s3 = [(centx-w)+x2,(centy)+ y2 + h21,centdepth]
+        s4 = [(centx-w)+x2+w21,(centy)+ y2 + h21,centdepth]
         top = [s1,s2]
         bottom = [s3,s4]
         topWorld = convertToWorldCoords(top)
@@ -170,7 +221,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         
         #Draw the top of the bounding rectangle
         if cupType <> "Not a Cup":
-            new_cnt = cnt + [int(round((FC[j][0]-w),0)),int(round((FC[j][1]-h),0))]
+            new_cnt = hull + [int(round((centx-w),0)),int(round((centy-h),0))]
             cv2.line(img,(int(round(s1[0],0)),int(round(s1[1],0))),(int(round(s2[0],0)),int(round(s2[1],0))),colourList[j])
             cv2.drawContours(img,[new_cnt],0,colourList[j],2)
             new_cnt2 = cnt2 + [int(round((FC[j][0]-w),0)),int(round((FC[j][1]),0))]

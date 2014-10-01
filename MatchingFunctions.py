@@ -261,7 +261,47 @@ def MatchAllCapture(save, maxdist=200):
     KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
     img1 = img
     if save == 1:
-        saveImageMappedPoints(img1, KeyPointsTotalList, ImageNo)
+        saveImageMappedPoints(img, KeyPointsTotalList, 1)
+        
+    return KeyPointsTotalList, DistsTotalList, img, depth
+
+def MatchAllCaptureGlass(save, maxdist=200):
+    from os.path import isfile, join
+    import freenect
+    from os import listdir
+    import cv2
+    import numpy as np
+    import itertools
+    import sys
+
+    #Prepare a list of different training images
+    pathGlass = "TrainingImages/Glass/"
+    GlassCups = [ f for f in listdir(pathGlass) if isfile(join(pathGlass,f)) and f[0]<>"."]
+    
+    img, timestamp = freenect.sync_get_video()
+    depth, timestamp = freenect.sync_get_depth(format=freenect.DEPTH_REGISTERED)
+
+    detector = cv2.FeatureDetector_create("FAST")
+    descriptor = cv2.DescriptorExtractor_create("SIFT")
+    skp = detector.detect(img)
+    skp, sd = descriptor.compute(img, skp)
+    
+    KeyPointsTotalList = []
+    DistsTotalList = []
+
+    for i in GlassCups:
+        temp = cv2.imread(str(pathGlass+"/"+i))
+        KeyPointsOut = findKeyPointsDist(img,temp,skp,sd,maxdist)
+        KeyPointsTotalList += KeyPointsOut[0]
+        DistsTotalList += KeyPointsOut[1]
+
+    indices = range(len(DistsTotalList))
+    indices.sort(key=lambda i: DistsTotalList[i])
+    DistsTotalList = [DistsTotalList[i] for i in indices]
+    KeyPointsTotalList = [KeyPointsTotalList[i] for i in indices]
+    img1 = img
+    if save == 1:
+        saveImageMappedPoints(img, KeyPointsTotalList, 1)
         
     return KeyPointsTotalList, DistsTotalList, img, depth
 

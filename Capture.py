@@ -6,10 +6,10 @@ import frame_convert
 
 cv2.destroyAllWindows()
 i = 0
-while i < 7:
+while i < 3:
     img = freenect.sync_get_video()[0]
     cv2.imshow('image',img)
-    cv2.imwrite('CalibrationImages/Glass'+str(i)+'.jpg', img)
+    cv2.imwrite('CalibrationImages/Frame'+str(i)+'.jpg', img)
     cv2.waitKey(750)
     i+=1
 

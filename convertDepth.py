@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import cv2
 import cv2.cv as cv
+from MatchingFunctions.py import drawKeyPoints
 
 '''
 To convert to Camera co-ordinates from image pixels the following must be applied:
@@ -78,22 +79,29 @@ def convertToSuryaCoordsSimple(worldCoordsList):
 
 def findFiducial():
 
-    # load fiducial
-    tag = cv2.imread('Tags/Tag36h9.png',0)
-    real_width = 95.0   # mm (measure these!!!!)
+    # load fiducial with greyscale flag
+    tag = cv2.imread('Frame.png', 0)
+    # tag = cv2.imread('Tags/Tag36h9.png', 0)
+    real_width = 51.5   # mm (measure these!!!!)
     h, w = tag.shape    # h and w of fiducial
 
-    # load in one of our distorted images (possibly take an image)
-    img = cv2.imread('photo.jpg') # trainImage
+    # load in one of our "distorted" images with greyscale flag
+    img = cv2.imread('CalibrationImages/Fiducial/Fiducial1.jpg')
+    #img = cv2.imread('photo.jpg') # trainImage
+    #img, timestamp = freenect.sync_get_video()     #(possibly take an image)
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
 
     # Load previously saved data about the camera - generated with the chessboard photos
     dist = np.load('CalibrationImages/Caliboutput/dist.npy')
     Cam_Mat = np.load('CalibrationImages/Caliboutput/mtx1.npy')
 
+    '''
     # undistort the image!
     ph, pw = img.shape[:2]
     newcameramtx, roi=cv2.getOptimalNewCameraMatrix(Cam_Mat, dist, (pw, ph), 1, (pw, ph))
     img = cv2.undistort(img, Cam_Mat, dist, None, newcameramtx)
+    '''
 
     # Initiate ORB detector
     orb = cv2.ORB()
@@ -108,27 +116,23 @@ def findFiducial():
 
     # find the fiducial
     print("finding fiducial")
-    M = find(tag_des, tag_kp)
-    draw_outline(M)
+    M = find(tag_des, tag_kp, img_des, img_kp)
+    draw_outline(M, h, w, img)
 
     # write out full size image
     cv2.imwrite('found.jpg', img)
 
-    # resize for display
-    newx, newy = img.shape[1]/4,img.shape[0]/4 #new size (w,h)
-    img = cv2.resize(img, (newx, newy))
-
     # show the image
     cv2.imshow('found', img)
     cv2.waitKey()
-
+    cv2.destroyAllWindows()
     
 
 
 # does the match, if it's good returns the homography transform
-def find(des, kp):
+def find(des, kp, img_des, img_kp):
 
-    MIN_MATCH_COUNT = 80
+    MIN_MATCH_COUNT = 50
 
     # create BFMatcher object
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -139,7 +143,7 @@ def find(des, kp):
     # Sort them in the order of their distance.
     matches = sorted(matches, key = lambda x:x.distance)
 
-    print "matches are found - %d/%d" % (len(matches), MIN_MATCH_COUNT)
+    print "Matches found -> %d/%d" % (len(matches), MIN_MATCH_COUNT)
     
     if len(matches) > MIN_MATCH_COUNT:
         src_pts = np.float32([kp[m.queryIdx].pt for m in matches[:MIN_MATCH_COUNT]]).reshape(-1,1,2)
@@ -157,7 +161,7 @@ def find(des, kp):
 
 
 #draws a box round the fiducial
-def draw_outline(M):
+def draw_outline(M, h, w, img):
     #array containing co-ords of the fiducial
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     #transform the coords of the fiducial onto the picture
@@ -175,6 +179,9 @@ def convertToSuryaCoords(worldCoordsList):
     for cup in worldCoordsList:
         cupnp = np.array(cup)
         print cupnp.shape
+
+if __name__== '__main__':
+    findFiducial()
 
 
 

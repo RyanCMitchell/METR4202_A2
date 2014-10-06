@@ -180,8 +180,8 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         
         
         
-        print "mid width",CupMidWidth
-        print "top width",CupTopWidth
+        #print "mid width",CupMidWidth
+        #print "top width",CupTopWidth
 
         if CupMidWidth > CupTopWidth:
             

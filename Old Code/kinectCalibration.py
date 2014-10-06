@@ -25,14 +25,14 @@ while i < 20:
 
 cv2.waitKey(0)
 '''
-
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+# The OpenCV test images are a 7x6 grid with 30mm squares
 # Our test images are a 5x8 grid with 26mm squares
 objp = np.zeros((board_w * board_h, 3), np.float32)
-objp[:,:2] = np.mgrid[0:board_h*square:square, 0:board_w*square:square].T.reshape(-1, 2)
+objp[:, :2] = np.mgrid[0:board_h:square, 0:board_w:square].T.reshape(-1, 2)
 
 # Arrays to store object points and image points from all the images.
 objpoints = [] # 3d point in real world space
@@ -69,8 +69,39 @@ for image in chessImages:
 # tvecs = translation vectors
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 
-np.save('CalibrationImages/Caliboutput/mtx1.npy', mtx)
-np.save('CalibrationImages/Caliboutput/dist.npy', dist)
+#check if this is the correct scaling
+#ret = ret * square
+#mtx = mtx * square
+#dist = dist * square
+#rvecs = rvecs * square
+#tvecs = tvecs * square
+
+# read in an immage to undistort
+img = cv2.imread('CalibrationImages/Calibrate3.jpg')
+img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+cv2.imshow('image',img)
+cv2.waitKey(1000)
+h, w = img.shape[:2]
+# print h,w
+# print dist
+# print mtx
+newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+
+# undistort the image
+dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+# print dst.shape
+#cv2.imshow('sdsds',dst)
+# crop the image
+x, y, w, h = roi
+#print roi
+dst = dst[y:y+h, x:x+w]
+#print dst.shape
+'''cv2.imshow('image',dst)
+cv2.waitKey(0)
+cv2.imwrite('CalibrationImages/Caliboutput/calibresult.jpg',dst)'''
+np.save('CalibrationImages/Caliboutput/mtx1',mtx)
+np.save('CalibrationImages/Caliboutput/dist',dist)
+
 
 
 '''Re-projection error gives a good estimation of just how exact the found

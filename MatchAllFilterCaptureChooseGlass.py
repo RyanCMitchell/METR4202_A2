@@ -9,7 +9,7 @@ from math import sqrt
 from convertDepth import convertToWorldCoords
 
 
-def MatchAllClusterGlass(save, maxdist=200, filtparam=2.0):
+def MatchAllClusterGlass(save, maxdist=100, filtparam=2.0):
     
     PointsList, DisList, img, depth = MatchAllCaptureGlass(0,maxdist)
     
@@ -33,18 +33,11 @@ def MatchAllClusterGlass(save, maxdist=200, filtparam=2.0):
     segregated, centers, distFromCenter, distFromCenterAve1 = Cluster(Z, 1)
     segregated, centers, distFromCenter, distFromCenterAve2 = Cluster(Z, 2)
     segregated, centers, distFromCenter, distFromCenterAve3 = Cluster(Z, 3)
-    segregated, centers, distFromCenter, distFromCenterAve4 = Cluster(Z, 4)
-    segregated, centers, distFromCenter, distFromCenterAve5 = Cluster(Z, 5)
-    segregated, centers, distFromCenter, distFromCenterAve6 = Cluster(Z, 6)
-    segregated, centers, distFromCenter, distFromCenterAve7 = Cluster(Z, 7)
 
-    distFromCenterAveList = [(sum(distFromCenterAve1)/len(distFromCenterAve1))*1.0,
-    (sum(distFromCenterAve2)/len(distFromCenterAve2))*1.0,
-    (sum(distFromCenterAve3)/len(distFromCenterAve3))*1.0,
-    (sum(distFromCenterAve4)/len(distFromCenterAve4))*1.0,
-    (sum(distFromCenterAve5)/len(distFromCenterAve5))*1.0,
-    (sum(distFromCenterAve6)/len(distFromCenterAve6))*1.0,
-    (sum(distFromCenterAve7)/len(distFromCenterAve7))*1.0,]
+    splitTend = 0.2
+    distFromCenterAveList = [(sum(distFromCenterAve1)/len(distFromCenterAve1))*1.0*splitTend,
+    (sum(distFromCenterAve2)/len(distFromCenterAve2))*2.0*splitTend,
+    (sum(distFromCenterAve3)/len(distFromCenterAve3))*3.0*splitTend]
 
     groups = distFromCenterAveList.index(min(distFromCenterAveList))+1
 
@@ -65,7 +58,7 @@ def MatchAllClusterGlass(save, maxdist=200, filtparam=2.0):
     #remove clusters that are >= 3 points or all superimposed
     i = 0
     while i < groups:
-        if len(segregatedF[i]) <= 5 or np.isnan(np.std(segregatedF[i])):
+        if len(segregatedF[i]) <= 25 or np.isnan(np.std(segregatedF[i])):
             del segregatedF[i], centers[i], distFromCenter[i], distFromCenterAve[i]
             groups -= 1
         i += 1
@@ -245,6 +238,9 @@ def MatchAllClusterGlass(save, maxdist=200, filtparam=2.0):
                 pt_a = (int(segregated[j][i,0]), int(segregated[j][i,1]))
                 cv2.circle(img, pt_a, 3, colourList[j])
                 cv2.line(img, pt_a, centers[j], colourList[j])
+                rpt1 = tuple(segregated[j].min(axis=0))
+                rpt2 = tuple(segregated[j].max(axis=0))
+                cv2.rectangle(img, rpt1, rpt2, colourList[j])
         else:
             deleteList.append(j)
             
@@ -263,7 +259,7 @@ if __name__== '__main__':
     
     cv2.destroyAllWindows()
     while 1<2:
-        MatchAllClusterGlass(0,80,1.2)
+        MatchAllClusterGlass(0,60,0.6)
         cv2.waitKey(10)
 
     

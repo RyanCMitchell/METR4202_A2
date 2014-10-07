@@ -6,12 +6,13 @@ import freenect, itertools, sys, time, cv2
 from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAllCapture, Cluster, fit_ellipses
 from matplotlib import pyplot as plt
 from math import sqrt
-from convertDepth import convertToWorldCoords
-
+from CoordTransform import convertToWorldCoords, transformCoords, FrameFind
 
 def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     
     PointsList, DisList, img, depth = MatchAllCapture(0,maxdist)
+
+    #Corners = FrameFind()
     
     PointsClusterList = []
     for i in xrange(len(PointsList)):
@@ -72,10 +73,13 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     # Create a centriod depth list
     FinalCenters = []
     for j in xrange(groups):
-        FinalCenters.append([centers[j][0],centers[j][1],depth[centers[j][1],centers[j][0]]])
+        FinalCenters.append([centers[j][0], centers[j][1], depth[centers[j][1], centers[j][0]]])
 
-    # Convert to world coordinates
-    FinalCentersWC = convertToWorldCoords(FinalCenters)
+    # Convert to world and then object coordinates
+    FinalCentersCC = convertToWorldCoords(FinalCenters)
+    Corners = np.load('CalibrationImages/Caliboutput/corners.npy')
+    FinalCentersWC = transformCoords(FinalCentersCC, Corners)
+    
     
     segregated = segregatedF
     FC = FinalCenters
@@ -135,7 +139,6 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         CupMidWidth = midWorld[1][0]-midWorld[0][0]
         CupTopWidth = max(depthRange)-min(depthRange)
 
-        
 
         cv2.circle(cup11, tuple(Maxpos), 3, colourList[j+1])
         cv2.circle(cup11, tuple(Minpos), 3, colourList[j+1])
@@ -177,7 +180,6 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         #cv2.drawContours(cup1,[hull],0,colourList[j],2)
         #cv2.imshow('hull',cup1)
         #cv2.waitKey(0)
-        
         
         
         #print "mid width",CupMidWidth
@@ -255,6 +257,7 @@ if __name__== '__main__':
     
     
     cv2.destroyAllWindows()
+    FrameFind()
     while 1<2:
         MatchAllCluster(0,80,2)
         cv2.waitKey(10)

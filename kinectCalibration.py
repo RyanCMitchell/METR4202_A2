@@ -14,7 +14,7 @@ square = 26
 
 #Clear all CV windows
 cv2.destroyAllWindows()
-'''
+
 i = 0
 while i < 20:
     img = freenect.sync_get_video()[0]
@@ -24,7 +24,7 @@ while i < 20:
     i+=1
 
 cv2.waitKey(0)
-'''
+
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)

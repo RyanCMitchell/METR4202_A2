@@ -222,16 +222,18 @@ def MatchAllCapture(save, maxdist=200):
     #cv2.destroyAllWindows()
 
     #Prepare a list of different training images
-    pathlarge = "TrainingImages/LargeCup/"
-    pathmedium = "TrainingImages/MediumCup/"
-    pathsmall = "TrainingImages/SmallCup/"
+    pathlarge = "TrainingImages/HighCups/LargeCup/"
+    pathmedium = "TrainingImages/HighCups/MediumCup/"
+    pathsmall = "TrainingImages/HighCups/SmallCup/"
     pathtest = "TestImages"
 
     largecups = [ f for f in listdir(pathlarge) if isfile(join(pathlarge,f)) and f[0]<>"."]
     mediumcups = [ f for f in listdir(pathmedium) if isfile(join(pathmedium,f)) and f[0]<>"."]
     smallcups = [ f for f in listdir(pathsmall) if isfile(join(pathsmall,f)) and f[0]<>"."]
     testimages = [ f for f in listdir(pathtest) if isfile(join(pathtest,f)) and f[0]<>"."]
-    
+
+    #img = cv2.imread(str(pathtest+"/"+testimages[ImageNo]))
+
     img, timestamp = freenect.sync_get_video()
     depth, timestamp = freenect.sync_get_depth(format=freenect.DEPTH_REGISTERED)
 

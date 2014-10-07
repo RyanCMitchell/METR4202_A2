@@ -222,9 +222,9 @@ def MatchAllCapture(save, maxdist=200):
     #cv2.destroyAllWindows()
 
     #Prepare a list of different training images
-    pathlarge = "TrainingImages/HighCups/LargeCup/"
-    pathmedium = "TrainingImages/HighCups/MediumCup/"
-    pathsmall = "TrainingImages/HighCups/SmallCup/"
+    pathlarge = "TrainingImages/AxonCups/LargeCup/"
+    pathmedium = "TrainingImages/AxonCups/MediumCup/"
+    pathsmall = "TrainingImages/AxonCups/SmallCup/"
     pathtest = "TestImages"
 
     largecups = [ f for f in listdir(pathlarge) if isfile(join(pathlarge,f)) and f[0]<>"."]

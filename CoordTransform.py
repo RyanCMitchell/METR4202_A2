@@ -117,16 +117,21 @@ def FrameFind():
     BottomRight = PointFind(corners[-8], img, depth, col = (0,255,255))
 
     Corners = convertToWorldCoords([TopLeft, BottomLeft, BottomRight, TopRight])
+    PixCorners = np.array([TopLeft, BottomLeft, BottomRight, TopRight])
 
     Corners = np.array(Corners)
     np.save('CalibrationImages/Caliboutput/corners.npy',Corners)
-    '''
-    cv2.line(img, tuple(BottomLeft[:2]), tuple(TopLeft[:2]), (255,0,0))
-    cv2.line(img, tuple(BottomLeft[:2]), tuple(BottomRight[:2]), (0,0,255))
+    np.save('CalibrationImages/Caliboutput/PixCorners.npy',PixCorners)
+    """
+    cv2.line(img, tuple(BottomLeft[:2]), tuple(TopLeft[:2]), (255,0,0),3)
+    cv2.line(img, tuple(BottomLeft[:2]), tuple(BottomRight[:2]), (0,0,255),3)
+    cv2.line(img, tuple(PixCorners[1][:2]), tuple(PixCorners[0][:2]), (255,0,0),3)
+    cv2.line(img, tuple(PixCorners[1][:2]), tuple(PixCorners[2][:2]), (0,0,255),3)
     cv2.imshow('Frame',img)
-    #cv2.imwrite('CoordTransform.png', img)
+    cv2.imwrite('CoordTransform.png', img)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()'''
+    cv2.destroyAllWindows()
+    """
     return Corners
 
 
@@ -163,7 +168,7 @@ def transformCoords(coords, Corners):
     coordTWC = []
     for coord in coords:
         coord = np.asarray(coord) #Convert to numpy vector
-        coordTWC.append(transformPoint(R, origin0, coord).tolist())
+        coordTWC.append(np.rint(transformPoint(R, origin0, coord)).astype(int).tolist())
         #print "Camera: ", coord, "-> World: ", transformPoint(R, origin0, coord)
     return coordTWC
 

@@ -78,8 +78,12 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     # Convert to world and then object coordinates
     FinalCentersCC = convertToWorldCoords(FinalCenters)
     Corners = np.load('CalibrationImages/Caliboutput/corners.npy')
+    PixCorners = np.load('CalibrationImages/Caliboutput/PixCorners.npy')
     FinalCentersWC = transformCoords(FinalCentersCC, Corners)
     
+    #Draw the coordinate system
+    cv2.line(img, tuple(PixCorners[1][:2]), tuple(PixCorners[0][:2]), (255,0,0),3)
+    cv2.line(img, tuple(PixCorners[1][:2]), tuple(PixCorners[2][:2]), (0,0,255),3)
     
     segregated = segregatedF
     FC = FinalCenters
@@ -98,16 +102,45 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         # Choose pixel area likley to contain a cup
         w = -0.08811*centdepth+103.0837
         h = -0.13216*centdepth+154.6256
-        h = h
         cup1 = depthimg[(centy-h):(centy), (centx-w):(centx+w)]
         cup11 = np.copy(cup1)
         cupDepth1 = depthmask[(centy-h):(FC[j][1]), (centx-w):(centx+w)]
+        cupDepth2 = np.copy(cupDepth1)
+        
 
         # Create blank binary images to fill with depth thresholds
         shape1 = np.zeros(cupDepth1.shape,dtype=np.uint8)
         shape2 = np.zeros(cupDepth1.shape,dtype=np.uint8)
+        shape3 = np.zeros(cupDepth1.shape,dtype=np.uint8)
 
-        
+        for i in xrange(cupDepth1.shape[0]):
+            for k in xrange(cupDepth1.shape[1]):
+                if cupDepth2[i,k] == 0:
+                    shape3[i,k] = 255
+        cv2.imshow('depth',shape3)
+
+        i = 0
+        Flag = True
+        while Flag == True:
+            for k in xrange(cupDepth1.shape[1]/2,0,-1):
+                if cupDepth2[cupDepth1.shape[0]-1-i,k] == 0:
+                    midLeft = k+1
+                    Flag = False
+                    break
+            i += 1
+        leftDepth = cupDepth2[cupDepth1.shape[0]-1-i,midLeft]
+
+        i = 0
+        Flag = True
+        while Flag == True:
+            for k in xrange(cupDepth1.shape[1]/2,cupDepth1.shape[1]):
+                if cupDepth2[cupDepth1.shape[0]-1-i,k] == 0:
+                    midRight = k-1
+                    Flag = False
+                    break
+            i += 1
+        rightDepth = cupDepth2[cupDepth1.shape[0]-1-i,midRight]
+
         # Fill with threshold depths
         upper = centdepth+100
         lower = centdepth-50
@@ -126,9 +159,9 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         if len(midDepthRange) < 3:
             continue
 
-        Maxpos = depthRangePos[depthRange.index(max(depthRange))]
         Minpos = depthRangePos[depthRange.index(min(depthRange))]
-        Cutoff = max(Maxpos[1],Minpos[1])
+        MinDepth = min(depthRange)
+        Cutoff = Minpos[1]
         
         midMin = min(midDepthRange)
         midMax = max(midDepthRange)
@@ -137,27 +170,68 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         mid = [s3,s4]
         midWorld = convertToWorldCoords(mid)
         CupMidWidth = midWorld[1][0]-midWorld[0][0]
-        CupTopWidth = max(depthRange)-min(depthRange)
-
-
-        cv2.circle(cup11, tuple(Maxpos), 3, colourList[j+1])
-        cv2.circle(cup11, tuple(Minpos), 3, colourList[j+1])
-        cv2.line(cup11, tuple(Maxpos), tuple(Minpos), colourList[j+1])
-        #cv2.imshow('MaxMin',cup11)
 
         for i in xrange(Cutoff):
             for k in xrange(cupDepth1.shape[1]):
                 if lower<cupDepth1[i,k]<upper:
                     shape2[i,k] = 255
-        #cv2.imshow('thresh',shape2)
+        cv2.imshow('thresh',shape2)
 
+        q = 0
+        runFlag = True
+        while runFlag is True and q < Cutoff:
+            for p in xrange(cupDepth1.shape[1]):
+                if shape2[q,p] == 255:
+                    Maxpos = [p,q]
+                    MaxDepth = cupDepth1[q,p]
+                    runFlag = False
+                    break
+            q += 1
+
+        cv2.circle(cup11, tuple(Maxpos), 3, colourList[j+1])
+        cv2.circle(cup11, tuple(Minpos), 3, colourList[j+1])
+        cv2.line(cup11, tuple(Maxpos), tuple(Minpos), colourList[j+1])
+        cv2.circle(cup11, (midLeft,cupDepth1.shape[0]), 3, colourList[j+1])
+        cv2.circle(cup11, (midRight,cupDepth1.shape[0]), 3, colourList[j+1])
+        cv2.line(cup11, (midLeft,cupDepth1.shape[0]), (midLeft,cupDepth1.shape[0]), colourList[j+1])
+        cv2.imshow('MaxMin',cup11)
+
+        globMin0 = int(round(centx-w+Minpos[0],0))
+        globMin1 = int(round(centy-h+Minpos[1],0))
+        globMax0 = int(round(centx-w+Maxpos[0],0))
+        globMax1 = int(round(centy-h+Maxpos[1],0))
+        globLeft = int(round(centx-w+midLeft,0))
+        globRight = int(round(centx-w+midRight,0))
+        CupMidTopPix = np.mean([[globMin0,globMin1],[globMax0,globMax1]],axis=0)
+        CupMidTopPix = [int(CupMidTopPix[0]),int(CupMidTopPix[1])]
+        
+        #Draw cup key points
+        cv2.circle(img, (globMax0,globMax1), 2, (255,0,0), -1)
+        cv2.circle(img, (globMin0,globMin1), 2, (255,0,0), -1)
+        cv2.circle(img, (globLeft,centy), 5, (255,0,0), -1)
+        cv2.circle(img, (globRight,centy), 5, (255,0,0), -1)
+
+        
+        FrontTopCup = [globMin0,globMin1,MinDepth]
+        BackTopCup = [globMax0,globMax1,MaxDepth]
+        LeftCup = [globLeft,centy,leftDepth]
+        RightCup = [globRight,centy,rightDepth]
+
+        CupTopPoints = convertToWorldCoords([FrontTopCup,BackTopCup])
+        CupTopWidth = np.linalg.norm(np.array(CupTopPoints[0])-np.array(CupTopPoints[1]))
+        CupMidPoints = convertToWorldCoords([LeftCup,RightCup])
+        CupMidWidth = np.linalg.norm(np.array(CupMidPoints[0])-np.array(CupMidPoints[1]))
+        
+        CupMidTop = np.mean(CupTopPoints,axis=0)
+        
+                    
         blurThresh = cv2.blur(shape2,(5,5))
-        #cv2.imshow('blur',blurThresh)
+        cv2.imshow('blur',blurThresh)
 
         thresh1 = 200
         thresh2 = 300
         edges = cv2.Canny(blurThresh,thresh1,thresh2)
-        #cv2.imshow('edges',edges)
+        cv2.imshow('edges',edges)
 
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours)==0:
@@ -177,13 +251,9 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
         whiteColour = max(cupGray[Maxpos[1],Maxpos[0]], cupGray[Minpos[1],Minpos[0]])
         fillRatio = float(ColourAverageF[0])/whiteColour
         
-        #cv2.drawContours(cup1,[hull],0,colourList[j],2)
-        #cv2.imshow('hull',cup1)
-        #cv2.waitKey(0)
-        
-        
-        #print "mid width",CupMidWidth
-        #print "top width",CupTopWidth
+        cv2.drawContours(cup1,[hull],0,colourList[j],2)
+        cv2.imshow('hull',cup1)
+        cv2.waitKey(0)
 
         if CupMidWidth > CupTopWidth:
             
@@ -231,15 +301,15 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0):
     # Draw the groups
     deleteList = []
     for j in xrange(groups):
-        if len(FinalCentersWC[j]) > 3:
+        if len(FinalCentersWC[j]) > 1:
             centerst = tuple(np.array(centers[j])+np.array([0,50]))
             cv2.putText(img,str(FinalCentersWC[j]), centerst, cv2.FONT_HERSHEY_SIMPLEX, 0.3, colourList[j])
-            cv2.circle(img, centers[j], 10, colourList[j], -1)
-            cv2.circle(img, centers[j], 2, (0,0,0), -1)
             for i in range(len(segregated[j])):
                 pt_a = (int(segregated[j][i,0]), int(segregated[j][i,1]))
                 cv2.circle(img, pt_a, 3, colourList[j])
                 cv2.line(img, pt_a, centers[j], colourList[j])
+            cv2.circle(img, tuple(CupMidTopPix), 10, colourList[j], -1)
+            cv2.circle(img, tuple(CupMidTopPix), 2, (0,0,0), -1)
         else:
             deleteList.append(j)
             

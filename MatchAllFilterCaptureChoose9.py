@@ -8,18 +8,22 @@ from matplotlib import pyplot as plt
 from math import sqrt
 from CoordTransform import convertToWorldCoords, transformCoords, FrameFind
 import time
+from GlassFind import GlassFind
 
-def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
+def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8, glassDetect = 0, drawnoncups = 0):
+    "This function attempts to find and classify cups and glasses in world coordinates"
     
+    #Find all SIFT points relating to the cups
     PointsList, DisList, img, depth = MatchAllCapture(0,maxdist)
-    
+
+    #Exclude SIFT points with no depth value
     PointsClusterList = []
     for i in xrange(len(PointsList)):
         if depth[PointsList[i].pt[1], PointsList[i].pt[0]] <> 0 and depth[PointsList[i].pt[1], PointsList[i].pt[0]] < 1000:
             PointsClusterList.append([PointsList[i].pt[0], PointsList[i].pt[1]])
-
     Z = np.array(PointsClusterList)
-    
+
+    #If there are not enough SIFT assume no cups present and show the unaltered image
     if len(Z) < 50:
         print "No Cups"
         cv2.imshow("Cups Stream", img)
@@ -29,14 +33,14 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
     # convert to np.float32
     Z = np.float32(Z)
 
-    # Determine how many cups there are
+    # Determine how many cups there are by trying clustering arrangements
     segregated, centers, distFromCenter, distFromCenterAve1 = Cluster(Z, 1)
     segregated, centers, distFromCenter, distFromCenterAve2 = Cluster(Z, 2)
     segregated, centers, distFromCenter, distFromCenterAve3 = Cluster(Z, 3)
     segregated, centers, distFromCenter, distFromCenterAve4 = Cluster(Z, 4)
     segregated, centers, distFromCenter, distFromCenterAve5 = Cluster(Z, 5)
 
-
+    # Rank clustering arrangments and decide on the number of cups
     distFromCenterAveList = [(sum(distFromCenterAve1)/len(distFromCenterAve1))*1.0,
     (sum(distFromCenterAve2)/len(distFromCenterAve2))*(1.0+1.0*SplitTend),
     (sum(distFromCenterAve3)/len(distFromCenterAve3))*(1.0+2.0*SplitTend),
@@ -44,11 +48,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
     (sum(distFromCenterAve5)/len(distFromCenterAve5))*(1.0+4.0*SplitTend)]
 
     groups = distFromCenterAveList.index(min(distFromCenterAveList))+1
-
     segregated, centers, distFromCenter, distFromCenterAve = Cluster(Z, groups)
 
 
-    #remove clusters that are <= 20 points or all superimposed
+    #remove clusters that are <= 20 points or that are all superimposed
     i = 0
     while i < groups:
         if len(segregated[i]) <= 20 or np.isnan(np.std(segregated[i])):
@@ -125,6 +128,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         #cv2.imshow('depth',shape3)
                     
         #Find the edges of the middle of the cup using the voids
+        #Attempt to find the centeral left edge
         try:
             del midLeft
         except NameError:
@@ -142,11 +146,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         try:
             midLeft
         except NameError:
-            #print "well, midLeft WASN'T defined after all!"
             continue
-
         leftDepth = cupDepth2[cupDepth1.shape[0]-1-i,midLeft]
 
+        #Attempt to find the centeral right edge
         try:
             del midRight
         except NameError:
@@ -160,10 +163,11 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
                     Flag = False
                     break
             i += 1
+            
+        #Catch non cups
         try:
             midRight
         except NameError:
-            #print "well, midRight WASN'T defined after all!"
             continue
             
         rightDepth = cupDepth2[cupDepth1.shape[0]-1-i,midRight]
@@ -180,7 +184,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
                     depthRange.append(cupDepth1[i,k])
                     depthRangePos.append([k,i])
 
-
+        # Find the closest point within the ROI (the front top edge of the cup)
         MinDepth = min(depthRange)
         Minpos = depthRangePos[depthRange.index(min(depthRange))]
         Cutoff = Minpos[1]
@@ -191,6 +195,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
                     shape2[i,k] = 255
         #cv2.imshow('thresh',shape2)
 
+        # Find the front far edge of the cup
         q = 0
         runFlag = True
         while runFlag is True and q < Cutoff:
@@ -204,9 +209,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         try:
             Maxpos
         except NameError:
-            #print "well, Maxpos WASN'T defined after all!"
             continue
 
+        #Draw the top of the ROI in a seperate image
+        """
         cv2.circle(cup11, tuple(Maxpos), 3, colourList[j+1])
         cv2.circle(cup11, tuple(Minpos), 3, colourList[j+1])
         cv2.line(cup11, tuple(Maxpos), tuple(Minpos), colourList[j+1])
@@ -214,7 +220,9 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         cv2.circle(cup11, (midRight,cupDepth1.shape[0]), 3, colourList[j+1])
         cv2.line(cup11, (midLeft,cupDepth1.shape[0]), (midLeft,cupDepth1.shape[0]), colourList[j+1])
         #cv2.imshow('MaxMin',cup11)
+        """
 
+        #Find the key points on the cup in world coordinates
         globMin0 = int(round(centx-w+Minpos[0],0))
         globMin1 = int(round(centy-h+Minpos[1],0))
         globMax0 = int(round(centx-w+Maxpos[0],0))
@@ -225,41 +233,34 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         CupMidTopPix = [int(CupMidTopPix[0]),int(CupMidTopPix[1])]
         CupMidTopPixList.append(CupMidTopPix)
 
-        """
-        #Draw cup key points
-        cv2.circle(img, (globMax0,globMax1), 2, (255,0,0), -1)
-        cv2.circle(img, (globMin0,globMin1), 2, (255,0,0), -1)
-        cv2.circle(img, (globLeft,centy), 5, (255,0,0), -1)
-        cv2.circle(img, (globRight,centy), 5, (255,0,0), -1)
-        """
-        
+        #Group the cup key points in lists
         FrontTopCup = [globMin0,globMin1,MinDepth]
         BackTopCup = [globMax0,globMax1,MaxDepth]
         LeftCup = [globLeft,centy,leftDepth]
         RightCup = [globRight,centy,rightDepth]
 
+        #Find distances and midpoints between key points to help classify cups
         CupTopPoints = convertToWorldCoords([FrontTopCup,BackTopCup])
         CupTopWidth = np.linalg.norm(np.array(CupTopPoints[0])-np.array(CupTopPoints[1]))
         CupMidPoints = convertToWorldCoords([LeftCup,RightCup])
         CupMidWidth = np.linalg.norm(np.array(CupMidPoints[0])-np.array(CupMidPoints[1]))
         CupMidTop = [np.mean(CupTopPoints,axis=0)]
         CupMidTopWorld = transformCoords(CupMidTop, Corners)
-        
+
+        #Find a contour around the top of each cup
         blurThresh = cv2.blur(shape2,(5,5))
         #cv2.imshow('blur',blurThresh)
-
         thresh1 = 200
         thresh2 = 300
         edges = cv2.Canny(blurThresh,thresh1,thresh2)
         #cv2.imshow('edges',edges)
-
         contours,hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         if len(contours)==0:
             continue
         cont = np.vstack(contours)
         hull = cv2.convexHull(cont)
 
-        
+        #Use the contour to determine fill    
         cupGray = cv2.cvtColor(cup1,cv2.COLOR_BGR2GRAY)
         #cv2.imshow('gray',cupGray)
         ColourAverage = np.array([0,0,0])
@@ -274,7 +275,7 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
         fillRatio = float(ColourAverageF[0])/whiteColour
         
         cv2.drawContours(cup1,[hull],0,colourList[j],2)
-        cv2.imshow('hull',cup1)
+        #cv2.imshow('hull',cup1)
 
         #print "CupTopWidth",CupTopWidth,"CupMidWidth",CupMidWidth
 
@@ -320,12 +321,51 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
             FinalCentersWC[j].append(cupType)
             FinalCentersWC[j].append(cupOrientation)
             FinalCentersWC[j].append(cupFill)
+
+    FinalGlassCentersWC = []
+    if glassDetect == 1:
+        # Find the glass
+        GlassCenters, GlassContours, GlassBox = GlassFind(img,depth)
         
-    
+        FinalGlassCenters = []
+        FinalGlassCentersWC = []
+        if len(GlassCenters)<>0:
+            for i in xrange(1):
+            #for i in xrange(len(GlassCenters)):
+                box = GlassBox[i]
+                cv2.drawContours(img,[GlassContours[i]],0,(255,255,255),2)
+                cv2.rectangle(img,(box[0],box[1]),(box[0]+box[2],box[1]+box[3]),(255,255,255),2)
+                glassx = box[0]+box[2]/2
+                glassy = box[1] + box[3]
+                cv2.circle(img, (glassx,glassy), 10, (255,255,255), -1)
+                cv2.circle(img, (glassx,glassy), 2, (0,0,0), -1)
+
+                z = 0
+                runFlag = True
+                glassDepth = 0
+                while glassy+z<480 and runFlag == True:
+                    if depth[glassy+z,glassx] <> 0:
+                        glassDepth = depth[glassy+z,glassx]
+                        runFlag = False
+                    z += 1
+                if glassDepth <> 0:
+                    FinalGlassCenters.append([glassx,glassy,glassDepth])
+                    
+            if glassDepth <> 0:
+                FinalGlassCentersCam = convertToWorldCoords(FinalGlassCenters)
+                FinalGlassCentersWC = transformCoords(FinalGlassCentersCam, Corners)
+
+                for i in xrange(1):
+                #for i in xrange(len(GlassCenters)):
+                    FinalGlassCentersWC[i][2] = FinalGlassCentersWC[i][2]+200
+                    FinalGlassCentersWC[i] = ["Glass"]+FinalGlassCentersWC[i]
+                    FinalGlassCentersWC[i].append("Empty")
+                    cv2.putText(img,str(FinalGlassCentersWC[i]), (FinalGlassCenters[i][0]+20,FinalGlassCenters[i][1]+20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0,0,0))
+        
     # Draw the groups
     deleteList = []
     for j in xrange(groups):
-        if len(FinalCentersWC[j]) > 3:
+        if len(FinalCentersWC[j]) > 3 or drawnoncups == 1:
             centerst = tuple(np.array(centers[j])+np.array([0,50]))
             cv2.putText(img,str(FinalCentersWC[j]), centerst, cv2.FONT_HERSHEY_SIMPLEX, 0.3, colourList[j])
             for i in range(len(segregated[j])):
@@ -345,7 +385,10 @@ def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8):
     if save == 1:
         cv2.imwrite('ProcessedImages/ProcessedCluster'+str(ImageNo)+'.jpg', img)
 
-    if len(FinalFinalCentersWC)<>0:
+    # Print or save final image
+    if len(FinalGlassCentersWC)<>0:
+        FinalFinalCentersWC.append(FinalGlassCentersWC)
+    if len(FinalFinalCentersWC)<>0 or len(FinalGlassCentersWC)<>0:
         print FinalFinalCentersWC
         cv2.imshow("Cups Stream", img)
 
@@ -354,9 +397,9 @@ if __name__== '__main__':
     
     
     cv2.destroyAllWindows()
-    #FrameFind()
+    FrameFind()
     while 1<2:
-        MatchAllCluster(0,maxdist=80, filtparam=2.0, SplitTend = 0.6)
+        MatchAllCluster(0,maxdist=80, filtparam=2.0, SplitTend = 0.7, glassDetect = 0, drawnoncups = 0)
         cv2.waitKey(10)
 
     

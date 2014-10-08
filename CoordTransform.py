@@ -89,7 +89,7 @@ def FrameFind():
 
     board_w = 5 # ours is 5
     board_h = 8 # ours is 8
-    square = 33 # mm
+    square = 26 # mm
 
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     objp = np.zeros((board_w * board_h, 3), np.float32)

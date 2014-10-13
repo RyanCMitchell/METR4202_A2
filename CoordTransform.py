@@ -58,6 +58,8 @@ def convertToWorldCoords(coordsList):
 
 
 def convertToSuryaCoordsSimple(worldCoordsList):
+    '''If you know the environment and where you will be placing the Kinect
+    you can use this function as a simple transform.'''
     simpleSuryaCoords = []
     matSize = 384       # mm
     minDepthRange = 600 # mm
@@ -86,6 +88,10 @@ def PointFind(point, img, depth, col = (255,0,0)):
 
 
 def FrameFind():
+    '''Find the Chess Board and use it as a reference to transform the Coord
+    system. This function only needs to be run once.
+    FrameFind() -> Numpy array of corners as
+    ([TopLeft, BottomLeft, BottomRight, TopRight])'''
 
     board_w = 5 # ours is 5
     board_h = 8 # ours is 8
@@ -190,5 +196,3 @@ if __name__ == '__main__':
     X = Corners[3]
     
     a = transformCoords([U, V, W, X])
-    print np.asarray(a)
-

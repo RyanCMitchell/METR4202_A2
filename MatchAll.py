@@ -3,12 +3,13 @@ from os.path import isfile, join
 from os import listdir
 import numpy as np
 import freenect, itertools, sys, time, cv2
-from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAllCapture, Cluster, fit_ellipses
+import time
 from matplotlib import pyplot as plt
 from math import sqrt
+from MatchingFunctions import findKeyPoints, drawKeyPoints, match, findKeyPointsDist, drawImageMappedPoints, saveImageMappedPoints, MatchAllCapture, Cluster, fit_ellipses
 from CoordTransform import convertToWorldCoords, transformCoords, FrameFind
-import time
-from GlassFind import GlassFind
+from MatchGlass import GlassFind
+#from GlassFind import GlassFind
 
 def MatchAllCluster(save, maxdist=200, filtparam=2.0, SplitTend = 0.8, glassDetect = 0, drawnoncups = 0):
     "This function attempts to find and classify cups and glasses in world coordinates"
